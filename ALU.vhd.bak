@@ -1,0 +1,104 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL; -- Required for arithmetic operations
+
+ENTITY ALU IS
+    PORT (
+        clk : IN STD_LOGIC; -- Clock signal
+        reset : IN STD_LOGIC; -- Reset signal
+        A : IN signed(15 DOWNTO 0); -- Input operand A
+        B : IN signed(15 DOWNTO 0); -- Input operand B
+        op : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- Operation selector
+        result : OUT STD_LOGIC_VECTOR(15 DOWNTO 0); -- ALU result
+        carry_out : OUT STD_LOGIC; -- Carry flag output
+        zero_out : OUT STD_LOGIC; -- Zero flag output
+        neg_out : OUT STD_LOGIC -- Negative flag output
+    );
+END ALU;
+
+ARCHITECTURE Behavioral OF ALU IS
+
+    SIGNAL alu_result : signed(15 DOWNTO 0);
+    SIGNAL carry_flag : STD_LOGIC := '0';
+    SIGNAL zero_flag : STD_LOGIC := '0';
+    SIGNAL neg_flag : STD_LOGIC := '0';
+BEGIN
+    -- ALU computation process
+    alu_logic : PROCESS (A, B, op)
+    BEGIN
+        CASE op IS
+            WHEN "000" => -- Pass A
+                alu_result <= A;
+                carry_flag <= '0';
+
+            WHEN "001" => -- Pass B
+                alu_result <= B;
+                carry_flag <= '0';
+
+            WHEN "010" => -- ADD
+                alu_result <= A + B;
+                IF (A(15) = B(15)) AND (A(15) /= alu_result(15)) THEN
+                    carry_flag <= '1'; -- Overflow detected
+                ELSE
+                    carry_flag <= '0';
+                END IF;
+
+            WHEN "011" => -- SUB
+                alu_result <= A - B;
+                IF (A(15) /= B(15)) AND (A(15) /= alu_result(15)) THEN
+                    carry_flag <= '1'; -- Overflow detected
+                ELSE
+                    carry_flag <= '0';
+                END IF;
+
+            WHEN "100" => -- AND
+                alu_result <= A AND B;
+                carry_flag <= '0';
+
+            WHEN "101" => -- Pass A again
+                alu_result <= A;
+                carry_flag <= '0';
+
+            WHEN "110" => -- NOT A
+                alu_result <= NOT A;
+                carry_flag <= '0';
+
+            WHEN "111" => -- Increment A
+                alu_result <= A + 1;
+                IF (A(15) = '0') AND (alu_result(15) = '1') THEN
+                    carry_flag <= '1'; -- Overflow detected
+                ELSE
+                    carry_flag <= '0';
+                END IF;
+
+            WHEN OTHERS => -- Default case
+                alu_result <= (OTHERS => '0');
+                carry_flag <= '0';
+        END CASE;
+
+        -- Update flags
+        IF (alu_result = 0) THEN
+            zero_flag <= '1';
+        ELSE
+            zero_flag <= '0';
+        END IF;
+        neg_flag <= alu_result(15); -- MSB indicates the sign
+    END PROCESS;
+
+    flag_update : PROCESS (clk, rst)
+    BEGIN
+        IF reset = '1' THEN
+            carry_out <= '0';
+            zero_out <= '0';
+            neg_out <= '0';
+
+        ELSIF rising_edge(clk) THEN
+            carry_out <= carry_flag;
+            zero_out <= zero_flag;
+            neg_out <= neg_flag;
+        END IF;
+    END PROCESS;
+
+    result <= STD_LOGIC_VECTOR(alu_result);
+
+END Behavioral;

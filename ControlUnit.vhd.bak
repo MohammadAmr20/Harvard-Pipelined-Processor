@@ -78,7 +78,7 @@ BEGIN
         '1' WHEN opCode = "01101" ELSE --PUSH
         '0';
     HLT <= '0' WHEN Reset = '1' ELSE
-        '1' WHEN opCode = "00001" ELSE --HLT
+        '1' WHEN opCode "00001" ELSE --HLT
         '0';
     Alu_Select <= "000" WHEN Reset = '1' ELSE -- ALU_OP: 000: A, 001: B, 010: ADD, 011: SUB, 100: AND, 110: NOT, 111:INC
         "000" WHEN opCode = "00111" ELSE --MOV
