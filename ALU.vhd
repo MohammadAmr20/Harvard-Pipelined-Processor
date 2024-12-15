@@ -4,8 +4,6 @@ USE IEEE.NUMERIC_STD.ALL; -- Required for arithmetic operations
 
 ENTITY ALU IS
     PORT (
-        clk : IN STD_LOGIC; -- Clock signal
-        reset : IN STD_LOGIC; -- Reset signal
         A : IN signed(15 DOWNTO 0); -- Input operand A
         B : IN signed(15 DOWNTO 0); -- Input operand B
         op : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- Operation selector
@@ -102,8 +100,8 @@ BEGIN
         A WHEN op = "101" ELSE
         NOT A WHEN op = "110" ELSE
         A + 1 WHEN op = "111";
-    carry_out <= '1' WHEN op = "010" AND (A(15) = B(15)) AND (A(15) /= alu_result(15)) ELSE
-        '1' WHEN op = "011" AND (A(15) /= B(15)) AND (A(15) /= alu_result(15)) ELSE
+    carry_out <= '1' WHEN op = "010" AND ((A(15) /= alu_result(15)) OR (B(15) /= alu_result(15))) ELSE
+        '1' WHEN op = "011" AND (A(15) /= alu_result(15)) ELSE
         '1' WHEN op = "111" AND (A(15) = '0') AND (alu_result(15) = '1') ELSE
         '0';
     result <= STD_LOGIC_VECTOR(alu_result);

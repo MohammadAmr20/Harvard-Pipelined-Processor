@@ -21,6 +21,8 @@ architecture Behavioral of ALU_tb is
     end component;
 
     -- Testbench signals
+    signal clk       : std_logic := '0';
+    signal reset     : std_logic := '0';
     signal A         : signed(15 downto 0) := (others => '0');
     signal B         : signed(15 downto 0) := (others => '0');
     signal op        : std_logic_vector(2 downto 0) := "000";
@@ -35,6 +37,7 @@ begin
     -- Instantiate the ALU
     uut: ALU
         port map (
+            reset     => reset,
             A         => A,
             B         => B,
             op        => op,
@@ -44,9 +47,23 @@ begin
             neg_out   => neg_out
         );
 
+    -- Clock generation
+    clk_process: process
+    begin
+        clk <= '0';
+        wait for CLK_PERIOD / 2;
+        clk <= '1';
+        wait for CLK_PERIOD / 2;
+    end process;
+
     -- Stimulus process
     stimulus_process: process
     begin
+        -- Reset ALU
+        reset <= '1';
+        wait for CLK_PERIOD;
+        reset <= '0';
+
         -- Test Case 1: Pass A (op = "000")
         A <= to_signed(10, 16);
         B <= to_signed(-5, 16);
