@@ -5,7 +5,7 @@ ENTITY ControlUnit IS
     PORT (
         opCode : IN STD_LOGIC_VECTOR(4 DOWNTO 0);
         Reset : IN STD_LOGIC;
-        preserveflags, branch, memwritesrc, RegDst : out std_logic;
+        preserveflags, branch, memwritesrc, RegDst, usersrc1, usersrc2 : out std_logic;
         branchselector, memaddsrc: out std_logic_vector(1 downto 0);
         regWrite : OUT STD_LOGIC;
         aluSource : OUT STD_LOGIC;
@@ -76,6 +76,23 @@ BEGIN
         "110" WHEN opCode = "00011" ELSE --NOT
         "111" WHEN opCode = "00100" ELSE --INC	
         "000";
+    usersrc1 <= '0' when Reset = '1' else
+        '1' when opCode = "00011" else --NOT
+        '1' when opCode = "00100" else --INC
+        '1' when opCode = "00101" else --OUT
+        '1' when opCode = "00111" else --MOV
+        '1' when opCode = "01000" else --ADD
+        '1' when opCode = "01001" else --SUB
+        '1' when opCode = "01010" else --AND
+        '1' when opCode = "01011" else --IADD
+        '1' when opCode = "01100" else --PUSH
+        '1' when opCode = "10000" else --STD
+        '0';
+    usersrc2 <= '0' when Reset = '1' else
+        '1' when opCode = "01000" else --ADD
+        '1' when opCode = "01001" else --SUB
+        '1' when opCode = "01010" else --AND
+        '0';
     MR <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01101" ELSE --POP
         '1' WHEN opCode = "01111" ELSE --LDD
