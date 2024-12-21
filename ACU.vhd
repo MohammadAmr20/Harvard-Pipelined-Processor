@@ -19,7 +19,7 @@ begin
 
     old_pc <=   executememory_pc when sp_overflow = '1' or return_signal = '1'
         else    decodeexecute_pc;
-    address_change_flag <=    '1' when or return_signal = '1' or sp_overflow = '1' or mid_out(15) = '1' or mid_out(14) = '1' or mid_out(13) = '1' or mid_out(12) = '1' or decodeexecute_interrupt_signal = '1'
+    address_change_flag <=    '1' when return_signal = '1' or sp_overflow = '1' or mid_out(15) = '1' or mid_out(14) = '1' or mid_out(13) = '1' or mid_out(12) = '1' or decodeexecute_interrupt_signal = '1'
                             or (decodeexecute_branch_signal = '1' and (decodeexecute_branch_selector = "00" or (decodeexecute_branch_selector = "01" and execute_flag_register(0) = '1') or (decodeexecute_branch_selector = "10" and execute_flag_register(1) = '1') or (decodeexecute_branch_selector = "11" and execute_flag_register(2) = '1')))
                             else '0';
     out_flag_register <= execute_flag_register;
