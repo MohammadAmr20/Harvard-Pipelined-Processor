@@ -1,7 +1,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
-
 entity RegisterFile is
     Port (
         clk         : in  std_logic;                -- Clock signal
@@ -14,15 +13,11 @@ entity RegisterFile is
         readData2   : out std_logic_vector(15 downto 0)  -- Data read from source 2
     );
 end RegisterFile;
-
 architecture Behavioral of RegisterFile is
-
     -- Register array: 8 registers of 16 bits each
     type reg_array is array (0 to 7) of std_logic_vector(15 downto 0);
     signal registers : reg_array := (others => (others => '0')); -- Initialize all registers to 0
-
 begin
-
     process(clk)
     begin
         if rising_edge(clk) then
@@ -32,7 +27,6 @@ begin
             end if;
         end if;
     end process;
-
     -- Read data from the selected registers
     readData1 <= registers(to_integer(unsigned(Rsrc1)));
     readData2 <= registers(to_integer(unsigned(Rsrc2)));
