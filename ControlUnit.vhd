@@ -46,6 +46,7 @@ BEGIN
         '1' WHEN opCode = "01110" ELSE --LDM
         '1' WHEN opCode = "01111" ELSE --LDD	
         '1' WHEN opCode = "10000" ELSE --STD	
+        '1' WHEN opCode = "10111" ELSE --INT
         '0';
     MW <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01100" ELSE --PUSH
@@ -67,26 +68,34 @@ BEGIN
         "00" WHEN opCode = "01001" ELSE --SUB
         "00" WHEN opCode = "01010" ELSE --AND
         "00" WHEN opCode = "01011" ELSE --IADD
+        "00" WHEN opCode = "01110" ELSE --LDM
         "01" WHEN opCode = "01111" ELSE --LDD
-        "01" WHEN opCode = "01110" ELSE --LDM
+        "01" WHEN opCode = "01101" ELSE --POP
         "10" WHEN opCode = "00110" ELSE --IN	
         "00";
     SP_Plus <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01100" ELSE --POP
+        '1' WHEN opCode = "10110" ELSE --RET
+        '1' WHEN opCode = "11000" ELSE --RTI
         '0';
     SP_Negative <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01101" ELSE --PUSH
+        '1' WHEN opCode = "10101" ELSE --CALL
+        '1' WHEN opCode = "10111" ELSE --INT
         '0';
     HLT <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "00001" ELSE --HLT
         '0';
-    Alu_Select <= "000" WHEN Reset = '1' ELSE -- ALU_OP: 000: A, 001: B, 010: ADD, 011: SUB, 100: AND, 110: NOT, 111:INC
-        "000" WHEN opCode = "00111" ELSE --MOV
-        "000" WHEN opCode = "00101" ELSE --OUT
+    Alu_Select <= "000" WHEN Reset = '1' ELSE -- ALU_OP: 000: A, 001: B, 010: ADD, 011: SUB, 100: AND, 101: SETC, 110: NOT, 111:INC
         "001" WHEN opCode = "01110" ELSE --LDM 
+        "001" WHEN opCode = "10111" ELSE --INT
         "010" WHEN opCode = "01000" ELSE --ADD
+        "010" WHEN opCode = "01011" ELSE --IADD
+        "010" WHEN opCode = "01111" ELSE --LDD
+        "010" WHEN opCode = "10000" ELSE --STD
         "011" WHEN opCode = "01001" ELSE --SUB
         "100" WHEN opCode = "01010" ELSE --AND
+        "101" WHEN opCode = "00010" ELSE --SETC
         "110" WHEN opCode = "00011" ELSE --NOT
         "111" WHEN opCode = "00100" ELSE --INC	
         "000";
