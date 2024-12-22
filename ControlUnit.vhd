@@ -9,7 +9,7 @@ ENTITY ControlUnit IS
         branchselector, memaddsrc: out std_logic_vector(1 downto 0);
         regWrite : OUT STD_LOGIC;
         aluSource : OUT STD_LOGIC;
-        HLT : OUT STD_LOGIC;
+        HLT : OUT STD_LOGIC:= '0';
         MW : OUT STD_LOGIC;
         MR : OUT STD_LOGIC;
         WB_Select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
