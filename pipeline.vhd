@@ -11,32 +11,47 @@ END processor;
 ARCHITECTURE behavior OF processor IS
     SIGNAL pc : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
     SIGNAL if_id_out_opCode : STD_LOGIC_VECTOR(4 DOWNTO 0);
-    SIGNAL if_id_out_pc : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL if_id_out_pc, if_id_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL if_id_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
     SIGNAL if_id_out_in_reg : STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL if_id_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL id_ex_in_data1, id_ex_in_data2 : STD_LOGIC_VECTOR(15 DOWNTO 0);
 
-    SIGNAL id_ie_out_rsrc1, id_ie_out_rsrc2, id_ie_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    --------------------------------------------------------------------------------------------------------  
+
+    SIGNAL id_ex_in_data1, id_ex_in_data2, id_ex_in_in_data, id_ex_in_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL id_ex_in_preserveflags, id_ex_in_branch, id_ex_in_memwritesrc, id_ex_in_RegDst, id_ex_in_usersrc1, id_ex_in_usersrc2 : STD_LOGIC;
     SIGNAL id_ex_in_branchselector, id_ex_in_memaddsrc, id_ex_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
-    SIGNAL id_ex_in_ALU_Select : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL id_ex_in_ALU_Select, id_ex_in_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
     SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_HLT, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC;
+    SIGNAL id_ex_in_rsrc1, id_ex_in_rsrc2, id_ex_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+    SIGNAL id_ex_out_pc, id_ex_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL id_ex_out_data1, id_ex_out_data2, id_ex_out_in_data, id_ex_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
+    SIGNAL id_ex_out_preserveflags, id_ex_out_branch, id_ex_out_memwritesrc, id_ex_out_RegDst, id_ex_out_usersrc1, id_ex_out_usersrc2 : STD_LOGIC;
+    SIGNAL id_ex_out_branchselector, id_ex_out_memaddsrc, id_ex_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL id_ex_out_ALU_Select, id_ex_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_HLT, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC;
+    SIGNAL id_ex_out_rsrc1, id_ex_out_rsrc2, id_ex_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+    SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0); --ALU operand
+    SIGNAL alu_result : STD_LOGIC_VECTOR(15 DOWNTO 0);
+    SIGNAL flag_register : STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+    --------------------------------------------------------------------------------------------------------  
 
     SIGNAL ie_mem_alu_out, ie_mem_in_data, ie_mem_mem_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM outputs
     SIGNAL ie_mem_reg_write, ie_mem_to_reg, ie_mem_in_sig : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
     SIGNAL ie_mem_reg_adrs : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
 
-    SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0); --ALU operand
     SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
 
     SIGNAL pc_stall : STD_LOGIC;
 
-    SIGNAL reset_ifid : STD_LOGIC;
+    SIGNAL reset_ifid, reset_idie : STD_LOGIC;
     SIGNAL mem_wb_out_regwrite : STD_LOGIC := '0';
     SIGNAL mem_wb_out_regdst : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_out_dataout : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
@@ -57,6 +72,76 @@ ARCHITECTURE behavior OF processor IS
             rs, rt, rd, out_reserved_flags : OUT STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
             out_pc : OUT STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
             out_immediate, out_in_reg : OUT STD_LOGIC_VECTOR (15 DOWNTO 0) := (OTHERS => '0')
+        );
+    END COMPONENT;
+
+    COMPONENT id_ex_register IS
+        PORT (
+            clk : IN STD_LOGIC;
+            reset : IN STD_LOGIC;
+            -- Input signals
+            id_ex_in_data1 : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_in_data2 : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_in_in_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_in_immediate : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_in_pc : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+            id_ex_in_pc_1 : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+            id_ex_in_preserveflags : IN STD_LOGIC;
+            id_ex_in_branch : IN STD_LOGIC;
+            id_ex_in_memwritesrc : IN STD_LOGIC;
+            id_ex_in_RegDst : IN STD_LOGIC;
+            id_ex_in_usersrc1 : IN STD_LOGIC;
+            id_ex_in_usersrc2 : IN STD_LOGIC;
+            id_ex_in_branchselector : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_in_memaddsrc : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_in_wb_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_in_ALU_Select : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_in_reserved_flags : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_in_regWrite : IN STD_LOGIC;
+            id_ex_in_aluSource : IN STD_LOGIC;
+            id_ex_in_HLT : IN STD_LOGIC;
+            id_ex_in_MW : IN STD_LOGIC;
+            id_ex_in_MR : IN STD_LOGIC;
+            id_ex_in_SP_Plus : IN STD_LOGIC;
+            id_ex_in_SP_Negative : IN STD_LOGIC;
+            id_ex_in_OUT_enable : IN STD_LOGIC;
+            id_ex_in_RET : IN STD_LOGIC;
+            id_ex_in_INT : IN STD_LOGIC;
+            id_ex_in_rsrc1 : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_in_rsrc2 : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_in_rdest : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+            -- Output signals
+            id_ex_out_data1 : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_out_data2 : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_out_in_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_out_immediate : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            id_ex_out_pc : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+            id_ex_out_pc_1 : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+            id_ex_out_preserveflags : OUT STD_LOGIC;
+            id_ex_out_branch : OUT STD_LOGIC;
+            id_ex_out_memwritesrc : OUT STD_LOGIC;
+            id_ex_out_RegDst : OUT STD_LOGIC;
+            id_ex_out_usersrc1 : OUT STD_LOGIC;
+            id_ex_out_usersrc2 : OUT STD_LOGIC;
+            id_ex_out_branchselector : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_out_memaddsrc : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_out_wb_select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            id_ex_out_ALU_Select : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_out_reserved_flags : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_out_regWrite : OUT STD_LOGIC;
+            id_ex_out_aluSource : OUT STD_LOGIC;
+            id_ex_out_HLT : OUT STD_LOGIC;
+            id_ex_out_MW : OUT STD_LOGIC;
+            id_ex_out_MR : OUT STD_LOGIC;
+            id_ex_out_SP_Plus : OUT STD_LOGIC;
+            id_ex_out_SP_Negative : OUT STD_LOGIC;
+            id_ex_out_OUT_enable : OUT STD_LOGIC;
+            id_ex_out_RET : OUT STD_LOGIC;
+            id_ex_out_INT : OUT STD_LOGIC;
+            id_ex_out_rsrc1 : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_out_rsrc2 : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
+            id_ex_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
         );
     END COMPONENT;
     COMPONENT RegisterFile IS
@@ -120,48 +205,70 @@ ARCHITECTURE behavior OF processor IS
     END COMPONENT;
 
     COMPONENT HazardDetection IS
-    PORT (
-        -- Inputs
-        id_ie_mem_read : IN STD_LOGIC; -- IE/MEM memRead  signal
-        id_ie_reg_write : IN STD_LOGIC; -- IE/MEM RegWrite signal
+        PORT (
+            -- Inputs
+            id_ie_mem_read : IN STD_LOGIC; -- IE/MEM memRead  signal
+            id_ie_reg_write : IN STD_LOGIC; -- IE/MEM RegWrite signal
 
-        id_ie_reg_adrs : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE register address
+            id_ie_reg_adrs : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE register address
 
-        if_id_rsrc1 : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE rsrc1 address
-        if_id_rsrc2 : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE rsrc2 address
-        if_id_usersrc1 : IN STD_LOGIC; -- ID/IE uses rsrc1
-        if_id_usersrc2 : IN STD_LOGIC; -- ID/IE uses rsrc2
+            if_id_rsrc1 : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE rsrc1 address
+            if_id_rsrc2 : IN STD_LOGIC_VECTOR(2 DOWNTO 0); -- ID/IE rsrc2 address
+            if_id_usersrc1 : IN STD_LOGIC; -- ID/IE uses rsrc1
+            if_id_usersrc2 : IN STD_LOGIC; -- ID/IE uses rsrc2
 
-        -- Outputs
-        pc_stall : OUT STD_LOGIC -- PC stall
+            -- Outputs
+            pc_stall : OUT STD_LOGIC -- PC stall
 
-    );
+        );
     END COMPONENT;
+
 BEGIN
     reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
+    reset_idie <= pc_stall;
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
-        instruction;
+    instruction;
     selected_immediate_ifid <= instruction AND (0 TO 15 => instruction_reg(0));
     InstructionMemory1 : InstructionMemory PORT MAP(
         addr => pc,
         data_out => instruction
     );
 
-    id_ex_alu_oper2_pre <= if_id_out_immediate WHEN id_ex_in_aluSource = '1' ELSE
-        id_ex_in_data2;
+    id_ex_alu_oper2_pre <= id_ex_out_immediate WHEN id_ex_out_aluSource = '1' ELSE
+    id_ex_out_data2;
 
     id_ex_alu_oper2 <= mem_forward_data WHEN (alu_src2 = "01") ELSE
-        wb_forward_data WHEN (alu_src2 = "10") ELSE
-        id_ex_alu_oper2_pre;
+    wb_forward_data WHEN (alu_src2 = "10") ELSE
+    id_ex_alu_oper2_pre;
 
     id_ex_alu_oper1 <= mem_forward_data WHEN (alu_src1 = "01") ELSE
-        wb_forward_data WHEN (alu_src1 = "10") ELSE
-        id_ex_in_data1;
+    wb_forward_data WHEN (alu_src1 = "10") ELSE
+    id_ex_out_data1;
 
+    id_ex_in_rsrc1 <= if_id_out_rsrc1;
+    id_ex_in_rsrc2 <= if_id_out_rsrc2;
+    id_ex_in_rdest <= if_id_out_rdest;
+    id_ex_in_in_data <= if_id_out_in_reg;
+    id_ex_in_immediate <= if_id_out_immediate;
+    if_id_out_pc_1 <= STD_LOGIC_VECTOR(unsigned(if_id_out_pc) + 1);
+
+    id_ex_in_reserved_flags <= if_id_out_reserved_flags;
+    ALU1 : ALU PORT MAP(
+        clk => clk,
+        Reset => reset,
+        A => SIGNED(id_ex_alu_oper1), -- Input operand A
+        B => SIGNED(id_ex_alu_oper2), -- Input operand B
+        op => id_ex_out_ALU_Select,
+        reserved_flags => id_ex_out_reserved_flags, -- Operation selector
+        preserve_flags => id_ex_out_preserveflags,
+        RET => id_ex_out_RET, -- Clock input
+        result => alu_result, -- ALU result
+        flag_reg => flag_register -- Flag output
+    );
     IFIDRegister1 : if_id_register PORT MAP(
         clk => clk,
         reset => reset_ifid,
-        pause => '0',
+        pause => pc_stall,
         pc => pc,
         reserved_flags => reserved_flags,
         instruction => selected_instruction_ifid,
@@ -175,6 +282,76 @@ BEGIN
         out_pc => if_id_out_pc,
         out_immediate => if_id_out_immediate,
         out_in_reg => if_id_out_in_reg
+    );
+
+    IDIERegister1 : id_ex_register PORT MAP(
+        clk => clk,
+        reset => reset_idie,
+
+        -- Input signals
+        id_ex_in_data1 => id_ex_in_data1,
+        id_ex_in_data2 => id_ex_in_data2,
+        id_ex_in_in_data => id_ex_in_in_data,
+        id_ex_in_immediate => id_ex_in_immediate,
+
+        id_ex_in_pc => if_id_out_pc,
+        id_ex_in_pc_1 => if_id_out_pc_1,
+        id_ex_in_preserveflags => id_ex_in_preserveflags,
+        id_ex_in_branch => id_ex_in_branch,
+        id_ex_in_memwritesrc => id_ex_in_memwritesrc,
+        id_ex_in_RegDst => id_ex_in_RegDst,
+        id_ex_in_usersrc1 => id_ex_in_usersrc1,
+        id_ex_in_usersrc2 => id_ex_in_usersrc2,
+        id_ex_in_branchselector => id_ex_in_branchselector,
+        id_ex_in_memaddsrc => id_ex_in_memaddsrc,
+        id_ex_in_wb_select => id_ex_in_wb_select,
+        id_ex_in_ALU_Select => id_ex_in_ALU_Select,
+        id_ex_in_reserved_flags => id_ex_in_reserved_flags,
+        id_ex_in_regWrite => id_ex_in_regWrite,
+        id_ex_in_aluSource => id_ex_in_aluSource,
+        id_ex_in_HLT => id_ex_in_HLT,
+        id_ex_in_MW => id_ex_in_MW,
+        id_ex_in_MR => id_ex_in_MR,
+        id_ex_in_SP_Plus => id_ex_in_SP_Plus,
+        id_ex_in_SP_Negative => id_ex_in_SP_Negative,
+        id_ex_in_OUT_enable => id_ex_in_OUT_enable,
+        id_ex_in_RET => id_ex_in_RET,
+        id_ex_in_INT => id_ex_in_INT,
+        id_ex_in_rsrc1 => id_ex_in_rsrc1,
+        id_ex_in_rsrc2 => id_ex_in_rsrc2,
+        id_ex_in_rdest => id_ex_in_rdest,
+
+        -- Output signals
+        id_ex_out_data1 => id_ex_out_data1,
+        id_ex_out_data2 => id_ex_out_data2,
+        id_ex_out_in_data => id_ex_out_in_data,
+        id_ex_out_immediate => id_ex_out_immediate,
+        id_ex_out_pc => id_ex_out_pc,
+        id_ex_out_pc_1 => id_ex_out_pc_1,
+        id_ex_out_preserveflags => id_ex_out_preserveflags,
+        id_ex_out_branch => id_ex_out_branch,
+        id_ex_out_memwritesrc => id_ex_out_memwritesrc,
+        id_ex_out_RegDst => id_ex_out_RegDst,
+        id_ex_out_usersrc1 => id_ex_out_usersrc1,
+        id_ex_out_usersrc2 => id_ex_out_usersrc2,
+        id_ex_out_branchselector => id_ex_out_branchselector,
+        id_ex_out_memaddsrc => id_ex_out_memaddsrc,
+        id_ex_out_wb_select => id_ex_out_wb_select,
+        id_ex_out_ALU_Select => id_ex_out_ALU_Select,
+        id_ex_out_reserved_flags => id_ex_out_reserved_flags,
+        id_ex_out_regWrite => id_ex_out_regWrite,
+        id_ex_out_aluSource => id_ex_out_aluSource,
+        id_ex_out_HLT => id_ex_out_HLT,
+        id_ex_out_MW => id_ex_out_MW,
+        id_ex_out_MR => id_ex_out_MR,
+        id_ex_out_SP_Plus => id_ex_out_SP_Plus,
+        id_ex_out_SP_Negative => id_ex_out_SP_Negative,
+        id_ex_out_OUT_enable => id_ex_out_OUT_enable,
+        id_ex_out_RET => id_ex_out_RET,
+        id_ex_out_INT => id_ex_out_INT,
+        id_ex_out_rsrc1 => id_ex_out_rsrc1,
+        id_ex_out_rsrc2 => id_ex_out_rsrc2,
+        id_ex_out_rdest => id_ex_out_rdest
     );
     RegisterFile1 : RegisterFile PORT MAP(
         clk => clk,
@@ -225,24 +402,24 @@ BEGIN
         mem_wb_reg_adrs => mem_wb_out_regdst, -- MEM/WB register address
         ie_mem_reg_adrs => ie_mem_reg_adrs, -- IE/MEM register address
 
-        id_ie_rsrc1 => id_ie_out_rsrc1, -- ID/IE rsrc1 address
-        id_ie_rsrc2 => id_ie_out_rsrc2, -- ID/IE rsrc2 address
-        id_ie_usersrc1 => id_ex_in_usersrc1,  -- ID/IE uses rsrc1
-        id_ie_usersrc2 => id_ex_in_usersrc2, -- ID/IE uses rsrc2
+        id_ie_rsrc1 => id_ex_out_rsrc1, -- ID/IE rsrc1 address
+        id_ie_rsrc2 => id_ex_out_rsrc2, -- ID/IE rsrc2 address
+        id_ie_usersrc1 => id_ex_out_usersrc1, -- ID/IE uses rsrc1
+        id_ie_usersrc2 => id_ex_out_usersrc2, -- ID/IE uses rsrc2
 
         -- Outputs
         alu_src1 => alu_src1, -- ALU source 1 mux signal
         alu_src2 => alu_src2, -- ALU source 2 mux signal
         mem_forward_data => mem_forward_data, -- Forwarded data from MEM
-        wb_forward_data => wb_forward_data  -- Forwarded data from WB
+        wb_forward_data => wb_forward_data -- Forwarded data from WB
     );
 
-    HazardDetection1 : HazardDetection PORT MAP (
+    HazardDetection1 : HazardDetection PORT MAP(
         -- Inputs
-        id_ie_mem_read => id_ex_in_MR, -- IE/MEM memRead  signal
-        id_ie_reg_write => id_ex_in_regWrite,-- IE/MEM RegWrite signal
+        id_ie_mem_read => id_ex_out_MR, -- IE/MEM memRead  signal
+        id_ie_reg_write => id_ex_out_regWrite, -- IE/MEM RegWrite signal
 
-        id_ie_reg_adrs => id_ie_out_rdest, -- ID/IE register address
+        id_ie_reg_adrs => id_ex_out_rdest, -- ID/IE register address
 
         if_id_rsrc1 => if_id_out_rsrc1, -- ID/IE rsrc1 address
         if_id_rsrc2 => if_id_out_rsrc2, -- ID/IE rsrc2 address
@@ -259,11 +436,11 @@ BEGIN
             pc <= (OTHERS => '0');
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
-        ELSIF rising_edge(clk) THEN
+            ELSIF rising_edge(clk) THEN
             pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             IF instruction_reg(0) = '1' THEN
                 instruction_reg <= (OTHERS => '0');
-            ELSE
+                ELSE
                 instruction_reg <= instruction;
             END IF;
         END IF;
