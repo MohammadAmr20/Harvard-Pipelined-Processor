@@ -11,7 +11,7 @@ end processor;
 architecture behavior of processor is
     signal pc: std_logic_vector(11 downto 0) := (others => '0');
     signal instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid: std_logic_vector(15 downto 0) := (others => '0');
-    signal reserved_flags: std_logic_vector(2 downto 0);
+    signal reserved_flags: std_logic_vector(2 downto 0):= (others => '0');
     signal if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest: std_logic_vector(2 downto 0);
     signal if_id_out_opCode: std_logic_vector(4 downto 0);
     signal if_id_out_pc: std_logic_vector(11 downto 0);
