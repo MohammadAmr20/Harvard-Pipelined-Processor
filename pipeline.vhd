@@ -672,7 +672,7 @@ BEGIN
         id_ie_mem_read => id_ex_out_MR, -- IE/MEM memRead  signal
         id_ie_reg_write => id_ex_out_regWrite, -- IE/MEM RegWrite signal
 
-        id_ie_reg_adrs => id_ex_out_rdest, -- ID/IE register address
+        id_ie_reg_adrs => id_ex_out_rsrc2, -- ID/IE register address
 
         if_id_rsrc1 => if_id_out_rsrc1, -- ID/IE rsrc1 address
         if_id_rsrc2 => if_id_out_rsrc2, -- ID/IE rsrc2 address
