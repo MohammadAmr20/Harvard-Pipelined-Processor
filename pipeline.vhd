@@ -414,7 +414,7 @@ BEGIN
     mem_wb_in_mem_data <= memory_data_out;
     mem_wb_in_alu_result <= ex_mem_out_alu_result;
     mem_wb_in_in_data <= ex_mem_out_in_data;
-
+    mem_wb_in_OUT_enable <= ex_mem_out_OUT_enable;
     SPAdder1 : SPAdder PORT MAP(
         A => sp, -- 12-bit unsigned input
         B => sp_adder, -- 12-bit unsigned input
