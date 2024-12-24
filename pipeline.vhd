@@ -4,11 +4,13 @@ USE IEEE.NUMERIC_STD.ALL;
 ENTITY processor IS
     PORT (
         clk, reset : IN STD_LOGIC;
-        in_port : IN STD_LOGIC_VECTOR(15 DOWNTO 0)
+        in_port : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+        out_port : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
     );
 END processor;
 
 ARCHITECTURE behavior OF processor IS
+    SIGNAL out_port_internal : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL pc : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL sp, sp_new : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '1');
     SIGNAL instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
@@ -70,11 +72,41 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
 
     SIGNAL pc_stall : STD_LOGIC;
-
-    SIGNAL reset_ifid, reset_idie : STD_LOGIC;
-    SIGNAL mem_wb_out_regwrite : STD_LOGIC := '0';
+    SIGNAL mem_wb_in_regwrite, mem_wb_in_OUT_enable : STD_LOGIC := '0';
+    SIGNAL mem_wb_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL mem_wb_in_regdst : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL mem_wb_out_mem_data, mem_wb_out_alu_result, mem_wb_out_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL mem_wb_out_regwrite, mem_wb_out_OUT_enable : STD_LOGIC := '0';
+    SIGNAL mem_wb_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL mem_wb_out_regdst : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_out_dataout : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL mem_wb_out_mem_data, mem_wb_out_alu_result, mem_wb_out_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL reset_ifid, reset_idie : STD_LOGIC;
+    ENTITY mem_wb_register IS
+        PORT (
+            clk : IN STD_LOGIC;
+
+            -- Input signals
+            mem_wb_in_mem_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_in_alu_result : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_in_in_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+
+            mem_wb_in_wb_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            mem_wb_in_regWrite : IN STD_LOGIC;
+            mem_wb_in_OUT_enable : IN STD_LOGIC;
+            mem_wb_in_rdest : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+            -- Output signals
+            mem_wb_out_mem_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_out_alu_result : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_out_in_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+
+            mem_wb_out_wb_select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            mem_wb_out_regWrite : OUT STD_LOGIC;
+            mem_wb_out_OUT_enable : OUT STD_LOGIC;
+            mem_wb_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
+        );
+    END ENTITY mem_wb_register;
 
     COMPONENT InstructionMemory IS
         PORT (
@@ -228,6 +260,31 @@ ARCHITECTURE behavior OF processor IS
             ex_mem_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
         );
     END COMPONENT;
+    COMPONENT mem_wb_register IS
+        PORT (
+            clk : IN STD_LOGIC;
+
+            -- Input signals
+            mem_wb_in_mem_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_in_alu_result : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_in_in_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+
+            mem_wb_in_wb_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            mem_wb_in_regWrite : IN STD_LOGIC;
+            mem_wb_in_OUT_enable : IN STD_LOGIC;
+            mem_wb_in_rdest : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+            -- Output signals
+            mem_wb_out_mem_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_out_alu_result : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            mem_wb_out_in_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+
+            mem_wb_out_wb_select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            mem_wb_out_regWrite : OUT STD_LOGIC;
+            mem_wb_out_OUT_enable : OUT STD_LOGIC;
+            mem_wb_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
+        );
+    END COMPONENT;
     COMPONENT RegisterFile IS
         PORT (
             clk, writeEnable : IN STD_LOGIC;
@@ -365,7 +422,7 @@ BEGIN
         sp WHEN ex_mem_out_memaddsrc = "01" ELSE
         ex_mem_out_alu_result(11 DOWNTO 0);
 
-    memory_data_in <= ex_mem_out_pc_1 WHEN ex_mem_out_memwritesrc = '1' ELSE
+    memory_data_in <= "0000" & ex_mem_out_pc_1 WHEN ex_mem_out_memwritesrc = '1' ELSE
         ex_mem_out_rsrc2;
 
     SPAdder1 : SPAdder PORT MAP(
@@ -531,6 +588,34 @@ BEGIN
         ex_mem_out_rdest => ex_mem_out_rdest
     );
 
+    mem_wb_out_dataout <= mem_wb_out_mem_data WHEN mem_wb_out_wb_select = "01" ELSE
+        mem_wb_out_in_data WHEN mem_wb_out_wb_select = "10" ELSE
+        mem_wb_out_alu_result;
+
+    MEM_WB_Register1 : mem_wb_register PORT MAP(
+        clk => clk,
+
+        -- Input signals
+        mem_wb_in_mem_data => mem_wb_in_mem_data,
+        mem_wb_in_alu_result => mem_wb_in_alu_result,
+        mem_wb_in_in_data => mem_wb_in_in_data,
+
+        mem_wb_in_wb_select => mem_wb_in_wb_select,
+        mem_wb_in_regWrite => mem_wb_in_regwrite,
+        mem_wb_in_OUT_enable => mem_wb_in_OUT_enable,
+        mem_wb_in_rdest => mem_wb_in_regdst,
+
+        -- Output signals
+        mem_wb_out_mem_data => mem_wb_out_mem_data,
+        mem_wb_out_alu_result => mem_wb_out_alu_result,
+        mem_wb_out_in_data => mem_wb_out_in_data,
+
+        mem_wb_out_wb_select => mem_wb_out_wb_select,
+        mem_wb_out_regWrite => mem_wb_out_regwrite,
+        mem_wb_out_OUT_enable => mem_wb_out_OUT_enable,
+        mem_wb_out_rdest => mem_wb_out_regdst
+    );
+
     RegisterFile1 : RegisterFile PORT MAP(
         clk => clk,
         writeEnable => mem_wb_out_regwrite,
@@ -608,7 +693,7 @@ BEGIN
         pc_stall => pc_stall -- PC stall
 
     );
-
+    out_port <= out_port_internal;
     PROCESS (clk) BEGIN
         IF reset = '1' THEN
             pc <= (OTHERS => '0');
@@ -622,6 +707,8 @@ BEGIN
             ELSE
                 instruction_reg <= instruction;
             END IF;
-        END IF;
-    END PROCESS;
-END behavior;
+            IF mem_wb_out_OUT_enable = '1' THEN
+                out_port_internal <= mem_wb_out_dataout;
+            END IF;
+        END PROCESS;
+    END behavior;
