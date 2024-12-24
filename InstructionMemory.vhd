@@ -14,12 +14,13 @@ ARCHITECTURE Behavioral OF InstructionMemory IS
     -- Memory declaration: 4K locations of 16 bits each
     TYPE memory_array IS ARRAY (0 TO 4095) OF STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL memory : memory_array := (
-        0 => "0111000000000001", -- Example instruction 1 LDM R1, 0000000011101110
-        1 => "0000000011101110", -- Example instruction 2 IMM
-        2 => "1000000100000000", -- Example instruction 3 STD 0(R2), R1
-        3 => "0011100000100000", -- Example instruction 4 PUSH R1
-        4 => "0000000000000000", -- Example instruction 5 
-        5 => "0000000000000000", -- Example instruction 6
+        0 => "1000000100000001", -- STD 0(R2), R1
+        1 => "0000000000000000", -- Example instruction 1 IMM
+        2 => "0111100000100001", -- Example instruction 2 LDD 0(R1), R2
+        3 => "0000000000000000", -- Example instruction 3 IMM
+        4 => "0010100100000000", -- Example instruction 4 OUT R2
+        5 => "0000000000000000", -- Example instruction 5 
+        6 => "0000000000000000", -- Example instruction 6 
         OTHERS => (OTHERS => '0') -- Initialize remaining locations to 0
     );
 BEGIN
