@@ -10,6 +10,7 @@ END processor;
 
 ARCHITECTURE behavior OF processor IS
     SIGNAL pc : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL sp, sp_new : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '1');
     SIGNAL instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
@@ -56,6 +57,8 @@ ARCHITECTURE behavior OF processor IS
 
     --------------------------------------------------------------------------------------------------------  
 
+    SIGNAL sp_adder : INTEGER;
+    SIGNAL sp_overflow : STD_LOGIC;
     SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
 
@@ -72,6 +75,15 @@ ARCHITECTURE behavior OF processor IS
             data_out : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
         );
     END COMPONENT;
+    COMPONENT SPAdder IS
+        PORT (
+            A : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- 12-bit unsigned input
+            B : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- 12-bit unsigned input
+            Sum : OUT STD_LOGIC_VECTOR(11 DOWNTO 0); -- 12-bit unsigned sum
+            Overflow : OUT STD_LOGIC -- Overflow flag
+        );
+    END COMPONENT;
+
     COMPONENT if_id_Register IS
         PORT (
             clk, reset, pause : IN STD_LOGIC;
@@ -305,6 +317,7 @@ BEGIN
     id_ex_in_rdest <= if_id_out_rdest;
     id_ex_in_in_data <= if_id_out_in_reg;
     id_ex_in_immediate <= if_id_out_immediate;
+    id_ex_in_reserved_flags <= if_id_out_reserved_flags;
     if_id_out_pc_1 <= STD_LOGIC_VECTOR(unsigned(if_id_out_pc) + 1);
 
     ex_mem_in_rsrc2 <= id_ex_alu_oper2;
@@ -328,7 +341,17 @@ BEGIN
         ELSE
         id_ex_out_rsrc2;
 
-    id_ex_in_reserved_flags <= if_id_out_reserved_flags;
+    sp_adder <= 0 WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '0') ELSE
+        2 WHEN (ex_mem_out_SP_Plus = '1' AND ex_mem_out_SP_Negative = '0') ELSE
+        -2 WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '1') ELSE
+        0;
+
+    SPAdder1 : SPAdder PORT MAP(
+        A => sp, -- 12-bit unsigned input
+        B => STD_LOGIC_VECTOR(to_signed(sp_adder, 12)), -- 12-bit unsigned input
+        Sum => sp_new, -- 12-bit unsigned sum
+        Overflow => sp_overflow -- Overflow flag
+    );
     ALU1 : ALU PORT MAP(
         clk => clk,
         Reset => reset,
