@@ -42,9 +42,19 @@ ARCHITECTURE behavior OF processor IS
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL ie_mem_alu_out, ie_mem_in_data, ie_mem_mem_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM outputs
-    SIGNAL ie_mem_reg_write, ie_mem_to_reg, ie_mem_in_sig : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
-    SIGNAL ie_mem_reg_adrs : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
+    SIGNAL ex_mem_out_rsrc2, ex_mem_out_alu_result, ex_mem_out_in_data, ex_mem_out_mem_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM outputs
+    SIGNAL ex_mem_out_pc, ex_mem_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL ex_mem_out_memwritesrc, ex_mem_out_regWrite, ex_mem_out_MW, ex_mem_out_MR, ex_mem_out_SP_Plus, ex_mem_out_SP_Negative, ex_mem_out_OUT_enable, ex_mem_out_RET, ex_mem_out_INT : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
+    SIGNAL ex_mem_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
+    SIGNAL ex_mem_out_memaddsrc, ex_mem_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
+
+    SIGNAL ex_mem_in_rsrc2, ex_mem_in_alu_result, ex_mem_in_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM inputs
+    SIGNAL ex_mem_in_pc, ex_mem_in_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL ex_mem_in_memwritesrc, ex_mem_in_regWrite, ex_mem_in_MW, ex_mem_in_MR, ex_mem_in_SP_Plus, ex_mem_in_SP_Negative, ex_mem_in_OUT_enable, ex_mem_in_RET, ex_mem_in_INT : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
+    SIGNAL ex_mem_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
+    SIGNAL ex_mem_in_memaddsrc, ex_mem_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
+
+    --------------------------------------------------------------------------------------------------------  
 
     SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
@@ -144,6 +154,51 @@ ARCHITECTURE behavior OF processor IS
             id_ex_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
         );
     END COMPONENT;
+    COMPONENT ex_mem_register IS
+        PORT (
+            clk : IN STD_LOGIC;
+            reset : IN STD_LOGIC;
+            -- Input signals
+            ex_mem_in_rsrc2 : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_in_alu_result : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_in_in_data : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_in_pc : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+            ex_mem_in_pc_1 : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+
+            ex_mem_in_memwritesrc : IN STD_LOGIC;
+            ex_mem_in_memaddsrc : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            ex_mem_in_wb_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            ex_mem_in_regWrite : IN STD_LOGIC;
+            ex_mem_in_MW : IN STD_LOGIC;
+            ex_mem_in_MR : IN STD_LOGIC;
+            ex_mem_in_SP_Plus : IN STD_LOGIC;
+            ex_mem_in_SP_Negative : IN STD_LOGIC;
+            ex_mem_in_OUT_enable : IN STD_LOGIC;
+            ex_mem_in_RET : IN STD_LOGIC;
+            ex_mem_in_INT : IN STD_LOGIC;
+            ex_mem_in_rdest : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+
+            -- Output signals
+            ex_mem_out_rsrc2 : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_out_alu_result : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_out_in_data : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            ex_mem_out_pc : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+            ex_mem_out_pc_1 : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+
+            ex_mem_out_memwritesrc : OUT STD_LOGIC;
+            ex_mem_out_memaddsrc : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            ex_mem_out_wb_select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+            ex_mem_out_regWrite : OUT STD_LOGIC;
+            ex_mem_out_MW : OUT STD_LOGIC;
+            ex_mem_out_MR : OUT STD_LOGIC;
+            ex_mem_out_SP_Plus : OUT STD_LOGIC;
+            ex_mem_out_SP_Negative : OUT STD_LOGIC;
+            ex_mem_out_OUT_enable : OUT STD_LOGIC;
+            ex_mem_out_RET : OUT STD_LOGIC;
+            ex_mem_out_INT : OUT STD_LOGIC;
+            ex_mem_out_rdest : OUT STD_LOGIC_VECTOR(2 DOWNTO 0)
+        );
+    END COMPONENT;
     COMPONENT RegisterFile IS
         PORT (
             clk, writeEnable : IN STD_LOGIC;
@@ -227,7 +282,7 @@ BEGIN
     reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
     reset_idie <= pc_stall;
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
-    instruction;
+        instruction;
     selected_immediate_ifid <= instruction AND (0 TO 15 => instruction_reg(0));
     InstructionMemory1 : InstructionMemory PORT MAP(
         addr => pc,
@@ -235,15 +290,15 @@ BEGIN
     );
 
     id_ex_alu_oper2_pre <= id_ex_out_immediate WHEN id_ex_out_aluSource = '1' ELSE
-    id_ex_out_data2;
+        id_ex_out_data2;
 
     id_ex_alu_oper2 <= mem_forward_data WHEN (alu_src2 = "01") ELSE
-    wb_forward_data WHEN (alu_src2 = "10") ELSE
-    id_ex_alu_oper2_pre;
+        wb_forward_data WHEN (alu_src2 = "10") ELSE
+        id_ex_alu_oper2_pre;
 
     id_ex_alu_oper1 <= mem_forward_data WHEN (alu_src1 = "01") ELSE
-    wb_forward_data WHEN (alu_src1 = "10") ELSE
-    id_ex_out_data1;
+        wb_forward_data WHEN (alu_src1 = "10") ELSE
+        id_ex_out_data1;
 
     id_ex_in_rsrc1 <= if_id_out_rsrc1;
     id_ex_in_rsrc2 <= if_id_out_rsrc2;
@@ -251,6 +306,27 @@ BEGIN
     id_ex_in_in_data <= if_id_out_in_reg;
     id_ex_in_immediate <= if_id_out_immediate;
     if_id_out_pc_1 <= STD_LOGIC_VECTOR(unsigned(if_id_out_pc) + 1);
+
+    ex_mem_in_rsrc2 <= id_ex_alu_oper2;
+    ex_mem_in_alu_result <= alu_result;
+    ex_mem_in_in_data <= id_ex_in_in_data;
+    ex_mem_in_pc <= id_ex_out_pc;
+    ex_mem_in_pc_1 <= id_ex_out_pc_1;
+    ex_mem_in_memwritesrc <= id_ex_out_memwritesrc;
+    ex_mem_in_regWrite <= id_ex_out_regWrite;
+    ex_mem_in_MW <= id_ex_out_MW;
+    ex_mem_in_MR <= id_ex_out_MR;
+    ex_mem_in_SP_Plus <= id_ex_out_SP_Plus;
+    ex_mem_in_SP_Negative <= id_ex_out_SP_Negative;
+    ex_mem_in_OUT_enable <= id_ex_out_OUT_enable;
+    ex_mem_in_RET <= id_ex_out_RET;
+    ex_mem_in_INT <= id_ex_out_INT;
+    ex_mem_in_memaddsrc <= id_ex_out_memaddsrc;
+    ex_mem_in_wb_select <= id_ex_out_wb_select;
+
+    ex_mem_in_rdest <= id_ex_out_rdest WHEN id_ex_out_RegDst = '1'
+        ELSE
+        id_ex_out_rsrc2;
 
     id_ex_in_reserved_flags <= if_id_out_reserved_flags;
     ALU1 : ALU PORT MAP(
@@ -353,6 +429,50 @@ BEGIN
         id_ex_out_rsrc2 => id_ex_out_rsrc2,
         id_ex_out_rdest => id_ex_out_rdest
     );
+    EX_MEM_Register1 : ex_mem_register PORT MAP(
+        -- Clock and reset
+        clk => clk,
+        reset => reset,
+
+        -- Input signals
+        ex_mem_in_rsrc2 => ex_mem_in_rsrc2,
+        ex_mem_in_alu_result => ex_mem_in_alu_result,
+        ex_mem_in_in_data => ex_mem_in_in_data,
+        ex_mem_in_pc => ex_mem_in_pc,
+        ex_mem_in_pc_1 => ex_mem_in_pc_1,
+        ex_mem_in_memwritesrc => ex_mem_in_memwritesrc,
+        ex_mem_in_memaddsrc => ex_mem_in_memaddsrc,
+        ex_mem_in_wb_select => ex_mem_in_wb_select,
+        ex_mem_in_regWrite => ex_mem_in_regWrite,
+        ex_mem_in_MW => ex_mem_in_MW,
+        ex_mem_in_MR => ex_mem_in_MR,
+        ex_mem_in_SP_Plus => ex_mem_in_SP_Plus,
+        ex_mem_in_SP_Negative => ex_mem_in_SP_Negative,
+        ex_mem_in_OUT_enable => ex_mem_in_OUT_enable,
+        ex_mem_in_RET => ex_mem_in_RET,
+        ex_mem_in_INT => ex_mem_in_INT,
+        ex_mem_in_rdest => ex_mem_in_rdest,
+
+        -- Output signals
+        ex_mem_out_rsrc2 => ex_mem_out_rsrc2,
+        ex_mem_out_alu_result => ex_mem_out_alu_result,
+        ex_mem_out_in_data => ex_mem_out_in_data,
+        ex_mem_out_pc => ex_mem_out_pc,
+        ex_mem_out_pc_1 => ex_mem_out_pc_1,
+        ex_mem_out_memwritesrc => ex_mem_out_memwritesrc,
+        ex_mem_out_memaddsrc => ex_mem_out_memaddsrc,
+        ex_mem_out_wb_select => ex_mem_out_wb_select,
+        ex_mem_out_regWrite => ex_mem_out_regWrite,
+        ex_mem_out_MW => ex_mem_out_MW,
+        ex_mem_out_MR => ex_mem_out_MR,
+        ex_mem_out_SP_Plus => ex_mem_out_SP_Plus,
+        ex_mem_out_SP_Negative => ex_mem_out_SP_Negative,
+        ex_mem_out_OUT_enable => ex_mem_out_OUT_enable,
+        ex_mem_out_RET => ex_mem_out_RET,
+        ex_mem_out_INT => ex_mem_out_INT,
+        ex_mem_out_rdest => ex_mem_out_rdest
+    );
+
     RegisterFile1 : RegisterFile PORT MAP(
         clk => clk,
         writeEnable => mem_wb_out_regwrite,
@@ -390,17 +510,17 @@ BEGIN
 
     ForwardingUnit1 : ForwardingUnit PORT MAP(
         mem_wb_reg_write => mem_wb_out_regwrite, -- MEM/WB RegWrite signal
-        ie_mem_reg_write => ie_mem_reg_write, -- IE/MEM RegWrite signal
-        ie_mem_to_reg => ie_mem_to_reg, -- IE/MEM MemtoReg signal
-        ie_mem_in_sig => ie_mem_in_sig, -- IE/MEM input signal
+        ie_mem_reg_write => ex_mem_out_regWrite, -- IE/MEM RegWrite signal
+        ie_mem_to_reg => ex_mem_out_wb_select(0), -- IE/MEM MemtoReg signal
+        ie_mem_in_sig => ex_mem_out_wb_select(1), -- IE/MEM input signal
 
         mem_wb_data_out => mem_wb_out_dataout, -- MEM/WB data output
-        ie_mem_alu_out => ie_mem_alu_out, -- IE/MEM ALU result
-        ie_mem_in_data => ie_mem_in_data, -- IE/MEM IN DATA
-        ie_mem_mem_data => ie_mem_mem_data, -- IE/MEM MEM DATA
+        ie_mem_alu_out => ex_mem_out_alu_result, -- IE/MEM ALU result
+        ie_mem_in_data => ex_mem_out_in_data, -- IE/MEM IN DATA
+        ie_mem_mem_data => ex_mem_out_mem_data, -- IE/MEM MEM DATA
 
         mem_wb_reg_adrs => mem_wb_out_regdst, -- MEM/WB register address
-        ie_mem_reg_adrs => ie_mem_reg_adrs, -- IE/MEM register address
+        ie_mem_reg_adrs => ex_mem_out_rdest, -- IE/MEM register address
 
         id_ie_rsrc1 => id_ex_out_rsrc1, -- ID/IE rsrc1 address
         id_ie_rsrc2 => id_ex_out_rsrc2, -- ID/IE rsrc2 address
@@ -436,11 +556,11 @@ BEGIN
             pc <= (OTHERS => '0');
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
-            ELSIF rising_edge(clk) THEN
+        ELSIF rising_edge(clk) THEN
             pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             IF instruction_reg(0) = '1' THEN
                 instruction_reg <= (OTHERS => '0');
-                ELSE
+            ELSE
                 instruction_reg <= instruction;
             END IF;
         END IF;

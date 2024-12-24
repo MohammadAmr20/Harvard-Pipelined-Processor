@@ -11,7 +11,6 @@ entity ex_mem_register is
         ex_mem_in_rsrc2          : in  STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_in_alu_result     : in  STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_in_in_data        : in  STD_LOGIC_VECTOR(15 DOWNTO 0);
-        ex_mem_in_immediate      : in  STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_in_pc             : in  STD_LOGIC_VECTOR(11 DOWNTO 0);
         ex_mem_in_pc_1           : in  STD_LOGIC_VECTOR(11 DOWNTO 0);
 
@@ -32,7 +31,6 @@ entity ex_mem_register is
         ex_mem_out_rsrc2         : out STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_out_alu_result    : out STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_out_in_data       : out STD_LOGIC_VECTOR(15 DOWNTO 0);
-        ex_mem_out_immediate     : out STD_LOGIC_VECTOR(15 DOWNTO 0);
         ex_mem_out_pc            : out STD_LOGIC_VECTOR(11 DOWNTO 0);
         ex_mem_out_pc_1          : out STD_LOGIC_VECTOR(11 DOWNTO 0);
 
@@ -60,7 +58,6 @@ begin
             ex_mem_out_rsrc2          <= (others => '0');
             ex_mem_out_alu_result     <= (others => '0');
             ex_mem_out_in_data        <= (others => '0');
-            ex_mem_out_immediate      <= (others => '0');
             ex_mem_out_pc             <= (others => '0');
             ex_mem_out_pc_1           <= (others => '0');
             ex_mem_out_memwritesrc    <= '0';
@@ -81,7 +78,6 @@ begin
             ex_mem_out_rsrc2          <= ex_mem_in_rsrc2;
             ex_mem_out_alu_result     <= ex_mem_in_alu_result;
             ex_mem_out_in_data        <= ex_mem_in_in_data;
-            ex_mem_out_immediate      <= ex_mem_in_immediate;
             ex_mem_out_pc             <= ex_mem_in_pc;
             ex_mem_out_pc_1           <= ex_mem_in_pc_1;
             ex_mem_out_memwritesrc    <= ex_mem_in_memwritesrc;
