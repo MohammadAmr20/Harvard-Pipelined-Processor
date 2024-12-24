@@ -330,6 +330,7 @@ ARCHITECTURE behavior OF processor IS
 
     COMPONENT HazardDetection IS
         PORT (
+            clk : IN STD_LOGIC;
             -- Inputs
             id_ie_mem_read : IN STD_LOGIC; -- IE/MEM memRead  signal
             id_ie_reg_write : IN STD_LOGIC; -- IE/MEM RegWrite signal
@@ -668,6 +669,9 @@ BEGIN
     );
 
     HazardDetection1 : HazardDetection PORT MAP(
+        -- CLOCK
+        clk => clk,
+        
         -- Inputs
         id_ie_mem_read => id_ex_out_MR, -- IE/MEM memRead  signal
         id_ie_reg_write => id_ex_out_regWrite, -- IE/MEM RegWrite signal
@@ -690,7 +694,9 @@ BEGIN
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
-            pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
+            IF (pc_stall = '0') THEN
+                pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
+            END IF;
             sp <= sp_new;
             IF instruction_reg(0) = '1' THEN
                 instruction_reg <= (OTHERS => '0');
