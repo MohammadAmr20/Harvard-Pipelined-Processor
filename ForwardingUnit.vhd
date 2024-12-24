@@ -46,7 +46,7 @@ begin
                 "10" when (id_ie_usersrc1 = '1' and mem_wb_reg_write = '1' and mem_wb_reg_adrs = id_ie_rsrc1) else --Forwarded Data from WB
                 "00";
 
-     -- ALU Source 1 (rsrc1 forwarding logic)
+     -- ALU Source 2 (rsrc2 forwarding logic)
     alu_src2 <= "01" when (id_ie_usersrc2 = '1' and ie_mem_reg_write = '1' and ie_mem_reg_adrs = id_ie_rsrc2) else --Forwarded Data from MEM
                 "10" when (id_ie_usersrc2 = '1' and mem_wb_reg_write = '1' and mem_wb_reg_adrs = id_ie_rsrc2) else --Forwarded Data from WB
                 "00";

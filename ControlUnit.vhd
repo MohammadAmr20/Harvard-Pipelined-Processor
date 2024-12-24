@@ -5,11 +5,11 @@ ENTITY ControlUnit IS
     PORT (
         opCode : IN STD_LOGIC_VECTOR(4 DOWNTO 0);
         Reset : IN STD_LOGIC;
-        preserveflags, branch, memwritesrc, RegDst, usersrc1, usersrc2 : out std_logic;
-        branchselector, memaddsrc: out std_logic_vector(1 downto 0);
+        preserveflags, branch, memwritesrc, RegDst, usersrc1, usersrc2 : OUT STD_LOGIC;
+        branchselector, memaddsrc : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
         regWrite : OUT STD_LOGIC;
         aluSource : OUT STD_LOGIC;
-        HLT : OUT STD_LOGIC:= '0';
+        HLT : OUT STD_LOGIC := '0';
         MW : OUT STD_LOGIC;
         MR : OUT STD_LOGIC;
         WB_Select : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -24,23 +24,23 @@ END ControlUnit;
 
 ARCHITECTURE Behavioral OF ControlUnit IS
 BEGIN
-    preserveflags <= '1' when opCode = "00000" else --NOP
-        '1' when opCode = "00001" else --HLT
-        '1' when opCode = "00101" else --OUT
-        '1' when opCode = "00110" else --IN
-        '1' when opCode = "00111" else --MOV
-        '1' when opCode = "01100" else --PUSH
-        '1' when opCode = "01101" else --POP
-        '1' when opCode = "01110" else --LDM
-        '1' when opCode = "01111" else --LDD
-        '1' when opCode = "10000" else --STD
-        '1' when opCode = "10001" else --JZ
-        '1' when opCode = "10010" else --JN
-        '1' when opCode = "10011" else --JC
-        '1' when opCode = "10100" else --JMP
-        '1' when opCode = "10101" else --CALL
-        '1' when opCode = "10110" else --RET
-        '1' when opCode = "10111" else --INT
+    preserveflags <= '1' WHEN opCode = "00000" ELSE --NOP
+        '1' WHEN opCode = "00001" ELSE --HLT
+        '1' WHEN opCode = "00101" ELSE --OUT
+        '1' WHEN opCode = "00110" ELSE --IN
+        '1' WHEN opCode = "00111" ELSE --MOV
+        '1' WHEN opCode = "01100" ELSE --PUSH
+        '1' WHEN opCode = "01101" ELSE --POP
+        '1' WHEN opCode = "01110" ELSE --LDM
+        '1' WHEN opCode = "01111" ELSE --LDD
+        '1' WHEN opCode = "10000" ELSE --STD
+        '1' WHEN opCode = "10001" ELSE --JZ
+        '1' WHEN opCode = "10010" ELSE --JN
+        '1' WHEN opCode = "10011" ELSE --JC
+        '1' WHEN opCode = "10100" ELSE --JMP
+        '1' WHEN opCode = "10101" ELSE --CALL
+        '1' WHEN opCode = "10110" ELSE --RET
+        '1' WHEN opCode = "10111" ELSE --INT
         '0';
     HLT <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "00001" ELSE --HLT
@@ -48,17 +48,17 @@ BEGIN
     INT <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "10111" ELSE --JMP
         '0';
-    branch <= '0' when reset = '1' else
-        '1' when opCode = "10001" else --JZ
-        '1' when opCode = "10010" else --JN
-        '1' when opCode = "10011" else --JC
-        '1' when opCode = "10100" else --JMP
-        '1' when opCode = "10101" else --CALL
+    branch <= '0' WHEN reset = '1' ELSE
+        '1' WHEN opCode = "10001" ELSE --JZ
+        '1' WHEN opCode = "10010" ELSE --JN
+        '1' WHEN opCode = "10011" ELSE --JC
+        '1' WHEN opCode = "10100" ELSE --JMP
+        '1' WHEN opCode = "10101" ELSE --CALL
         '0';
-    branchselector <= "00" when reset = '1' else
-        "01" when opCode = "10001" else --JZ
-        "10" when opCode = "10010" else --JN
-        "11" when opCode = "10011" else --JC
+    branchselector <= "00" WHEN reset = '1' ELSE
+        "01" WHEN opCode = "10001" ELSE --JZ
+        "10" WHEN opCode = "10010" ELSE --JN
+        "11" WHEN opCode = "10011" ELSE --JC
         "00";
     RET <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "10110" ELSE --JMP
@@ -76,22 +76,23 @@ BEGIN
         "110" WHEN opCode = "00011" ELSE --NOT
         "111" WHEN opCode = "00100" ELSE --INC	
         "000";
-    usersrc1 <= '0' when Reset = '1' else
-        '1' when opCode = "00011" else --NOT
-        '1' when opCode = "00100" else --INC
-        '1' when opCode = "00101" else --OUT
-        '1' when opCode = "00111" else --MOV
-        '1' when opCode = "01000" else --ADD
-        '1' when opCode = "01001" else --SUB
-        '1' when opCode = "01010" else --AND
-        '1' when opCode = "01011" else --IADD
-        '1' when opCode = "01100" else --PUSH
-        '1' when opCode = "10000" else --STD
+    usersrc1 <= '0' WHEN Reset = '1' ELSE
+        '1' WHEN opCode = "00011" ELSE --NOT
+        '1' WHEN opCode = "00100" ELSE --INC
+        '1' WHEN opCode = "00101" ELSE --OUT
+        '1' WHEN opCode = "00111" ELSE --MOV
+        '1' WHEN opCode = "01000" ELSE --ADD
+        '1' WHEN opCode = "01001" ELSE --SUB
+        '1' WHEN opCode = "01010" ELSE --AND
+        '1' WHEN opCode = "01011" ELSE --IADD
+        '1' WHEN opCode = "01100" ELSE --PUSH
+        '1' WHEN opCode = "10000" ELSE --STD
         '0';
-    usersrc2 <= '0' when Reset = '1' else
-        '1' when opCode = "01000" else --ADD
-        '1' when opCode = "01001" else --SUB
-        '1' when opCode = "01010" else --AND
+    usersrc2 <= '0' WHEN Reset = '1' ELSE
+        '1' WHEN opCode = "01000" ELSE --ADD
+        '1' WHEN opCode = "01001" ELSE --SUB
+        '1' WHEN opCode = "01010" ELSE --AND
+        '1' WHEN opCode = "10000" ELSE --STD
         '0';
     MR <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01101" ELSE --POP
@@ -119,17 +120,17 @@ BEGIN
         '1' WHEN opCode = "10000" ELSE --STD	
         '1' WHEN opCode = "10111" ELSE --INT
         '0';
-    memwritesrc <= '0' when reset = '1' else -- 0 for Rsrc2, 1 for PC+1
-        '1' when opCode = "10101" else --CALL
-        '1' when opCode = "10111" else --INT
+    memwritesrc <= '0' WHEN reset = '1' ELSE -- 0 for Rsrc2, 1 for PC+1
+        '1' WHEN opCode = "10101" ELSE --CALL
+        '1' WHEN opCode = "10111" ELSE --INT
         '0';
-    memaddsrc <= "00" when reset = '1' else -- 0 for AlUout, 1 for old SP, 2 for new SP
-        "01" when opCode = "01100" else --PUSH
-        "01" when opCode = "01101" else --POP
-        "01" when opCode = "10101" else --CALL
-        "01" when opCode = "10111" else --INT
-        "10" when opCode = "10110" else --RET
-        "10" when opCode = "11000" else --RTI
+    memaddsrc <= "00" WHEN reset = '1' ELSE -- 0 for AlUout, 1 for old SP, 2 for new SP
+        "01" WHEN opCode = "01100" ELSE --PUSH
+        "01" WHEN opCode = "10101" ELSE --CALL
+        "01" WHEN opCode = "10111" ELSE --INT
+        "10" WHEN opCode = "01101" ELSE --POP
+        "10" WHEN opCode = "10110" ELSE --RET
+        "10" WHEN opCode = "11000" ELSE --RTI
         "00";
     MW <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01100" ELSE --PUSH
@@ -163,9 +164,9 @@ BEGIN
     OUT_enable <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "00101" ELSE --OUT
         '0';
-    RegDst <= '0' when Reset = '1' else -- 0 for rsrc2, 1 for rdst
-        '1' when opCode = "01000" else --ADD
-        '1' when opCode = "01001" else --SUB
-        '1' when opCode = "01010" else --AND
+    RegDst <= '0' WHEN Reset = '1' ELSE -- 0 for rsrc2, 1 for rdst
+        '1' WHEN opCode = "01000" ELSE --ADD
+        '1' WHEN opCode = "01001" ELSE --SUB
+        '1' WHEN opCode = "01010" ELSE --AND
         '0';
 END Behavioral;

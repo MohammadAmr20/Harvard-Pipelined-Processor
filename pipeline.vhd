@@ -57,8 +57,15 @@ ARCHITECTURE behavior OF processor IS
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL sp_adder : INTEGER;
+    SIGNAL sp_adder : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL sp_overflow : STD_LOGIC;
+    CONSTANT ZERO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(0, 12));
+    CONSTANT POS_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(2, 12));
+    CONSTANT NEG_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(-2, 12));
+    SIGNAL memory_address : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL memory_data_in, memory_data_out : STD_LOGIC_VECTOR(15 DOWNTO 0);
+    SIGNAL memory_we, memory_re : STD_LOGIC;
+
     SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
 
@@ -73,6 +80,16 @@ ARCHITECTURE behavior OF processor IS
         PORT (
             addr : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
             data_out : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+        );
+    END COMPONENT;
+    COMPONENT DataMemory IS
+        PORT (
+            clk : IN STD_LOGIC; -- Clock signal
+            addr : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- 12-bit address input (4K = 2^12)
+            data_in : IN STD_LOGIC_VECTOR(15 DOWNTO 0); -- 16-bit data input
+            we : IN STD_LOGIC; -- Write enable signal
+            re : IN STD_LOGIC; -- Read enable signal
+            data_out : OUT STD_LOGIC_VECTOR(15 DOWNTO 0) -- 16-bit data output
         );
     END COMPONENT;
     COMPONENT SPAdder IS
@@ -296,17 +313,13 @@ BEGIN
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
         instruction;
     selected_immediate_ifid <= instruction AND (0 TO 15 => instruction_reg(0));
-    InstructionMemory1 : InstructionMemory PORT MAP(
-        addr => pc,
-        data_out => instruction
-    );
 
-    id_ex_alu_oper2_pre <= id_ex_out_immediate WHEN id_ex_out_aluSource = '1' ELSE
-        id_ex_out_data2;
-
-    id_ex_alu_oper2 <= mem_forward_data WHEN (alu_src2 = "01") ELSE
-        wb_forward_data WHEN (alu_src2 = "10") ELSE
+    id_ex_alu_oper2 <= id_ex_out_immediate WHEN id_ex_out_aluSource = '1' ELSE
         id_ex_alu_oper2_pre;
+
+    id_ex_alu_oper2_pre <= mem_forward_data WHEN (alu_src2 = "01") ELSE
+        wb_forward_data WHEN (alu_src2 = "10") ELSE
+        id_ex_out_data2;
 
     id_ex_alu_oper1 <= mem_forward_data WHEN (alu_src1 = "01") ELSE
         wb_forward_data WHEN (alu_src1 = "10") ELSE
@@ -320,7 +333,7 @@ BEGIN
     id_ex_in_reserved_flags <= if_id_out_reserved_flags;
     if_id_out_pc_1 <= STD_LOGIC_VECTOR(unsigned(if_id_out_pc) + 1);
 
-    ex_mem_in_rsrc2 <= id_ex_alu_oper2;
+    ex_mem_in_rsrc2 <= id_ex_alu_oper2_pre;
     ex_mem_in_alu_result <= alu_result;
     ex_mem_in_in_data <= id_ex_in_in_data;
     ex_mem_in_pc <= id_ex_out_pc;
@@ -341,17 +354,39 @@ BEGIN
         ELSE
         id_ex_out_rsrc2;
 
-    sp_adder <= 0 WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '0') ELSE
-        2 WHEN (ex_mem_out_SP_Plus = '1' AND ex_mem_out_SP_Negative = '0') ELSE
-        -2 WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '1') ELSE
-        0;
+    sp_adder <= ZERO WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '0') ELSE
+        POS_TWO WHEN (ex_mem_out_SP_Plus = '1' AND ex_mem_out_SP_Negative = '0') ELSE
+        NEG_TWO WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '1') ELSE
+        ZERO;
+    memory_re <= ex_mem_out_MR;
+    memory_we <= (ex_mem_out_MW AND NOT sp_overflow);
+
+    memory_address <= sp_new WHEN ex_mem_out_memaddsrc = "10" ELSE
+        sp WHEN ex_mem_out_memaddsrc = "01" ELSE
+        ex_mem_out_alu_result(11 DOWNTO 0);
+
+    memory_data_in <= ex_mem_out_pc_1 WHEN ex_mem_out_memwritesrc = '1' ELSE
+        ex_mem_out_rsrc2;
 
     SPAdder1 : SPAdder PORT MAP(
         A => sp, -- 12-bit unsigned input
-        B => STD_LOGIC_VECTOR(to_signed(sp_adder, 12)), -- 12-bit unsigned input
+        B => sp_adder, -- 12-bit unsigned input
         Sum => sp_new, -- 12-bit unsigned sum
         Overflow => sp_overflow -- Overflow flag
     );
+    InstructionMemory1 : InstructionMemory PORT MAP(
+        addr => pc,
+        data_out => instruction
+    );
+    DataMemory1 : DataMemory PORT MAP(
+        clk => clk, -- Clock signal
+        addr => memory_address, -- 12-bit address input (4K = 2^12)
+        data_in => memory_data_in, -- 16-bit data input
+        we => memory_we, -- Write enable signal
+        re => memory_re, -- Read enable signal
+        data_out => memory_data_out -- 16-bit data output
+    );
+
     ALU1 : ALU PORT MAP(
         clk => clk,
         Reset => reset,
@@ -581,6 +616,7 @@ BEGIN
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
             pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
+            sp <= sp_new;
             IF instruction_reg(0) = '1' THEN
                 instruction_reg <= (OTHERS => '0');
             ELSE
