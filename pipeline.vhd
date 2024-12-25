@@ -28,7 +28,7 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL id_ex_in_preserveflags, id_ex_in_branch, id_ex_in_memwritesrc, id_ex_in_RegDst, id_ex_in_usersrc1, id_ex_in_usersrc2 : STD_LOGIC := '0';
     SIGNAL id_ex_in_branchselector, id_ex_in_memaddsrc, id_ex_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL id_ex_in_ALU_Select, id_ex_in_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_HLT, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC := '0';
+    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC := '0';
     SIGNAL id_ex_in_rsrc1, id_ex_in_rsrc2, id_ex_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL id_ex_out_pc, id_ex_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
@@ -36,7 +36,7 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL id_ex_out_preserveflags, id_ex_out_branch, id_ex_out_memwritesrc, id_ex_out_RegDst, id_ex_out_usersrc1, id_ex_out_usersrc2 : STD_LOGIC := '0';
     SIGNAL id_ex_out_branchselector, id_ex_out_memaddsrc, id_ex_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL id_ex_out_ALU_Select, id_ex_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_HLT, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC := '0';
+    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC := '0';
     SIGNAL id_ex_out_rsrc1, id_ex_out_rsrc2, id_ex_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --ALU operand
@@ -72,6 +72,7 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- ALU Source Selector
 
     SIGNAL pc_stall : STD_LOGIC := '0';
+    SIGNAL HLT : STD_LOGIC := '0';
 
     --------------------------------------------------------------------------------------------------------  
 
@@ -88,7 +89,8 @@ ARCHITECTURE behavior OF processor IS
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL reset_ifid, reset_idie : STD_LOGIC;
+    SIGNAL pause_ifid, reset_ifid, reset_idie : STD_LOGIC;
+
     COMPONENT mem_wb_register IS
         PORT (
             clk : IN STD_LOGIC;
@@ -177,7 +179,6 @@ ARCHITECTURE behavior OF processor IS
             id_ex_in_reserved_flags : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
             id_ex_in_regWrite : IN STD_LOGIC;
             id_ex_in_aluSource : IN STD_LOGIC;
-            id_ex_in_HLT : IN STD_LOGIC;
             id_ex_in_MW : IN STD_LOGIC;
             id_ex_in_MR : IN STD_LOGIC;
             id_ex_in_SP_Plus : IN STD_LOGIC;
@@ -209,7 +210,6 @@ ARCHITECTURE behavior OF processor IS
             id_ex_out_reserved_flags : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
             id_ex_out_regWrite : OUT STD_LOGIC;
             id_ex_out_aluSource : OUT STD_LOGIC;
-            id_ex_out_HLT : OUT STD_LOGIC;
             id_ex_out_MW : OUT STD_LOGIC;
             id_ex_out_MR : OUT STD_LOGIC;
             id_ex_out_SP_Plus : OUT STD_LOGIC;
@@ -351,6 +351,8 @@ ARCHITECTURE behavior OF processor IS
 BEGIN
     reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
     reset_idie <= pc_stall;
+    pause_ifid <= (pc_stall OR HLT);
+
     selected_instruction_ifid <= instruction_reg WHEN instruction_reg(0) = '1' ELSE
         instruction;
     selected_immediate_ifid <= instruction AND (0 TO 15 => instruction_reg(0));
@@ -450,7 +452,7 @@ BEGIN
     IFIDRegister1 : if_id_register PORT MAP(
         clk => clk,
         reset => reset_ifid,
-        pause => pc_stall,
+        pause => pause_ifid,
         pc => pc,
         reserved_flags => reserved_flags,
         instruction => selected_instruction_ifid,
@@ -491,7 +493,6 @@ BEGIN
         id_ex_in_reserved_flags => id_ex_in_reserved_flags,
         id_ex_in_regWrite => id_ex_in_regWrite,
         id_ex_in_aluSource => id_ex_in_aluSource,
-        id_ex_in_HLT => id_ex_in_HLT,
         id_ex_in_MW => id_ex_in_MW,
         id_ex_in_MR => id_ex_in_MR,
         id_ex_in_SP_Plus => id_ex_in_SP_Plus,
@@ -523,7 +524,6 @@ BEGIN
         id_ex_out_reserved_flags => id_ex_out_reserved_flags,
         id_ex_out_regWrite => id_ex_out_regWrite,
         id_ex_out_aluSource => id_ex_out_aluSource,
-        id_ex_out_HLT => id_ex_out_HLT,
         id_ex_out_MW => id_ex_out_MW,
         id_ex_out_MR => id_ex_out_MR,
         id_ex_out_SP_Plus => id_ex_out_SP_Plus,
@@ -630,7 +630,7 @@ BEGIN
         memaddsrc => id_ex_in_memaddsrc,
         regWrite => id_ex_in_regWrite,
         aluSource => id_ex_in_aluSource,
-        HLT => id_ex_in_HLT,
+        HLT => HLT,
         MW => id_ex_in_MW,
         MR => id_ex_in_MR,
         WB_Select => id_ex_in_wb_select,
@@ -694,7 +694,7 @@ BEGIN
             reserved_flags <= (OTHERS => '0');
             instruction_reg <= (OTHERS => '0');
         ELSIF rising_edge(clk) THEN
-            IF (pc_stall = '0') THEN
+            IF (pc_stall = '0' OR HLT = '1') THEN
                 pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             END IF;
             IF instruction_reg(0) = '1' THEN
