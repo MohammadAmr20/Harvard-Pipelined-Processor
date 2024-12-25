@@ -47,6 +47,7 @@ BEGIN
         '0';
     INT <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "10111" ELSE --INT
+        '1' WHEN opCode = "10111" ELSE --INT
         '0';
     branch <= '0' WHEN reset = '1' ELSE
         '1' WHEN opCode = "10001" ELSE --JZ
@@ -85,8 +86,8 @@ BEGIN
         '1' WHEN opCode = "01001" ELSE --SUB
         '1' WHEN opCode = "01010" ELSE --AND
         '1' WHEN opCode = "01011" ELSE --IADD
-        '1' WHEN opCode = "01100" ELSE --PUSH
         '1' WHEN opCode = "10000" ELSE --STD
+        '1' WHEN opCode = "01111" ELSE --LDD
         '1' WHEN opCode = "01111" ELSE --LDD
         '0';
     usersrc2 <= '0' WHEN Reset = '1' ELSE
@@ -94,6 +95,7 @@ BEGIN
         '1' WHEN opCode = "01001" ELSE --SUB
         '1' WHEN opCode = "01010" ELSE --AND
         '1' WHEN opCode = "10000" ELSE --STD
+        '1' WHEN opCode = "01100" ELSE --PUSH
         '0';
     MR <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01101" ELSE --POP
@@ -159,8 +161,14 @@ BEGIN
         '0';
     SP_Negative <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "01100" ELSE --PUSH
+        '1' WHEN opCode = "01100" ELSE --PUSH
         '1' WHEN opCode = "10101" ELSE --CALL
         '1' WHEN opCode = "10111" ELSE --INT
+        '0';
+    SP_Plus <= '0' WHEN Reset = '1' ELSE
+        '1' WHEN opCode = "01101" ELSE --POP
+        '1' WHEN opCode = "10110" ELSE --RET
+        '1' WHEN opCode = "11000" ELSE --RTI
         '0';
     OUT_enable <= '0' WHEN Reset = '1' ELSE
         '1' WHEN opCode = "00101" ELSE --OUT

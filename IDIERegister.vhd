@@ -26,7 +26,6 @@ ENTITY id_ex_register IS
         id_ex_in_reserved_flags : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
         id_ex_in_regWrite : IN STD_LOGIC;
         id_ex_in_aluSource : IN STD_LOGIC;
-        id_ex_in_HLT : IN STD_LOGIC;
         id_ex_in_MW : IN STD_LOGIC;
         id_ex_in_MR : IN STD_LOGIC;
         id_ex_in_SP_Plus : IN STD_LOGIC;
@@ -58,7 +57,6 @@ ENTITY id_ex_register IS
         id_ex_out_reserved_flags : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
         id_ex_out_regWrite : OUT STD_LOGIC;
         id_ex_out_aluSource : OUT STD_LOGIC;
-        id_ex_out_HLT : OUT STD_LOGIC;
         id_ex_out_MW : OUT STD_LOGIC;
         id_ex_out_MR : OUT STD_LOGIC;
         id_ex_out_SP_Plus : OUT STD_LOGIC;
@@ -98,7 +96,6 @@ BEGIN
                 id_ex_out_reserved_flags <= (OTHERS => '0');
                 id_ex_out_regWrite <= '0';
                 id_ex_out_aluSource <= '0';
-                id_ex_out_HLT <= '0';
                 id_ex_out_MW <= '0';
                 id_ex_out_MR <= '0';
                 id_ex_out_SP_Plus <= '0';
@@ -130,7 +127,6 @@ BEGIN
                 id_ex_out_reserved_flags <= id_ex_in_reserved_flags;
                 id_ex_out_regWrite <= id_ex_in_regWrite;
                 id_ex_out_aluSource <= id_ex_in_aluSource;
-                id_ex_out_HLT <= id_ex_in_HLT;
                 id_ex_out_MW <= id_ex_in_MW;
                 id_ex_out_MR <= id_ex_in_MR;
                 id_ex_out_SP_Plus <= id_ex_in_SP_Plus;
