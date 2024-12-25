@@ -19,8 +19,9 @@ ARCHITECTURE Behavioral OF InstructionMemory IS
         2 => "0111100000100001", -- Example instruction 2 LDD 5(R1), R2
         3 => "0000000000000101", -- Example instruction 3 IMM
         4 => "0010100100000000", -- Example instruction 4 OUT R2
-        5 => "0000000000000000", -- Example instruction 5 
-        6 => "0000000000000000", -- Example instruction 6 
+        5 => "0011100100000000", -- Example instruction 2 MOV R2 R1
+        6 => "0110000000000000", -- Example instruction 2 PUSH R1
+        7 => "0110100001000000", -- Example instruction 2 POP R3
         OTHERS => (OTHERS => '0') -- Initialize remaining locations to 0
     );
 BEGIN

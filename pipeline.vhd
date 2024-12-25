@@ -15,73 +15,73 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL sp, sp_new : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '1');
     SIGNAL instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL if_id_out_opCode : STD_LOGIC_VECTOR(4 DOWNTO 0);
-    SIGNAL if_id_out_pc, if_id_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
-    SIGNAL if_id_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL if_id_out_in_reg : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL if_id_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
+    SIGNAL if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL if_id_out_opCode : STD_LOGIC_VECTOR(4 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL if_id_out_pc, if_id_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL if_id_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL if_id_out_in_reg : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL if_id_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL id_ex_in_data1, id_ex_in_data2, id_ex_in_in_data, id_ex_in_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL id_ex_in_preserveflags, id_ex_in_branch, id_ex_in_memwritesrc, id_ex_in_RegDst, id_ex_in_usersrc1, id_ex_in_usersrc2 : STD_LOGIC;
-    SIGNAL id_ex_in_branchselector, id_ex_in_memaddsrc, id_ex_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
-    SIGNAL id_ex_in_ALU_Select, id_ex_in_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_HLT, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC;
-    SIGNAL id_ex_in_rsrc1, id_ex_in_rsrc2, id_ex_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL id_ex_in_data1, id_ex_in_data2, id_ex_in_in_data, id_ex_in_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_in_preserveflags, id_ex_in_branch, id_ex_in_memwritesrc, id_ex_in_RegDst, id_ex_in_usersrc1, id_ex_in_usersrc2 : STD_LOGIC := '0';
+    SIGNAL id_ex_in_branchselector, id_ex_in_memaddsrc, id_ex_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_in_ALU_Select, id_ex_in_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_in_regWrite, id_ex_in_aluSource, id_ex_in_HLT, id_ex_in_MW, id_ex_in_MR, id_ex_in_SP_Plus, id_ex_in_SP_Negative, id_ex_in_OUT_enable, id_ex_in_RET, id_ex_in_INT : STD_LOGIC := '0';
+    SIGNAL id_ex_in_rsrc1, id_ex_in_rsrc2, id_ex_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
 
-    SIGNAL id_ex_out_pc, id_ex_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
-    SIGNAL id_ex_out_data1, id_ex_out_data2, id_ex_out_in_data, id_ex_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL id_ex_out_preserveflags, id_ex_out_branch, id_ex_out_memwritesrc, id_ex_out_RegDst, id_ex_out_usersrc1, id_ex_out_usersrc2 : STD_LOGIC;
-    SIGNAL id_ex_out_branchselector, id_ex_out_memaddsrc, id_ex_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
-    SIGNAL id_ex_out_ALU_Select, id_ex_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
-    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_HLT, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC;
-    SIGNAL id_ex_out_rsrc1, id_ex_out_rsrc2, id_ex_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL id_ex_out_pc, id_ex_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_out_data1, id_ex_out_data2, id_ex_out_in_data, id_ex_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_out_preserveflags, id_ex_out_branch, id_ex_out_memwritesrc, id_ex_out_RegDst, id_ex_out_usersrc1, id_ex_out_usersrc2 : STD_LOGIC := '0';
+    SIGNAL id_ex_out_branchselector, id_ex_out_memaddsrc, id_ex_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_out_ALU_Select, id_ex_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL id_ex_out_regWrite, id_ex_out_aluSource, id_ex_out_HLT, id_ex_out_MW, id_ex_out_MR, id_ex_out_SP_Plus, id_ex_out_SP_Negative, id_ex_out_OUT_enable, id_ex_out_RET, id_ex_out_INT : STD_LOGIC := '0';
+    SIGNAL id_ex_out_rsrc1, id_ex_out_rsrc2, id_ex_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
 
-    SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0); --ALU operand
-    SIGNAL alu_result : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL flag_register : STD_LOGIC_VECTOR(2 DOWNTO 0);
+    SIGNAL id_ex_alu_oper1, id_ex_alu_oper2, id_ex_alu_oper2_pre : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --ALU operand
+    SIGNAL alu_result : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL flag_register : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
 
     --------------------------------------------------------------------------------------------------------  
 
     SIGNAL ex_mem_out_rsrc2, ex_mem_out_alu_result, ex_mem_out_in_data, ex_mem_out_mem_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM outputs
-    SIGNAL ex_mem_out_pc, ex_mem_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL ex_mem_out_pc, ex_mem_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL ex_mem_out_memwritesrc, ex_mem_out_regWrite, ex_mem_out_MW, ex_mem_out_MR, ex_mem_out_SP_Plus, ex_mem_out_SP_Negative, ex_mem_out_OUT_enable, ex_mem_out_RET, ex_mem_out_INT : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
     SIGNAL ex_mem_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
     SIGNAL ex_mem_out_memaddsrc, ex_mem_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
 
     SIGNAL ex_mem_in_rsrc2, ex_mem_in_alu_result, ex_mem_in_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --IE/MEM inputs
-    SIGNAL ex_mem_in_pc, ex_mem_in_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL ex_mem_in_pc, ex_mem_in_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL ex_mem_in_memwritesrc, ex_mem_in_regWrite, ex_mem_in_MW, ex_mem_in_MR, ex_mem_in_SP_Plus, ex_mem_in_SP_Negative, ex_mem_in_OUT_enable, ex_mem_in_RET, ex_mem_in_INT : STD_LOGIC := '0'; -- IE/MEM RegWrite signal
     SIGNAL ex_mem_in_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
     SIGNAL ex_mem_in_memaddsrc, ex_mem_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- IE/MEM RegAddress 
 
     --------------------------------------------------------------------------------------------------------  
 
-    SIGNAL sp_adder : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL sp_adder : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL sp_overflow : STD_LOGIC;
     CONSTANT ZERO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(0, 12));
-    CONSTANT POS_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(2, 12));
-    CONSTANT NEG_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(-2, 12));
-    SIGNAL memory_address : STD_LOGIC_VECTOR(11 DOWNTO 0);
-    SIGNAL memory_data_in, memory_data_out : STD_LOGIC_VECTOR(15 DOWNTO 0);
-    SIGNAL memory_we, memory_re : STD_LOGIC;
+    CONSTANT POS_ONE : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(1, 12));
+    CONSTANT NEG_ONE : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(-1, 12));
+    SIGNAL memory_address : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL memory_data_in, memory_data_out : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL memory_we, memory_re : STD_LOGIC := '0';
 
-    SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0); --OUTPUT OF Forwarding Unit
-    SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0); -- ALU Source Selector
+    SIGNAL mem_forward_data, wb_forward_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0'); --OUTPUT OF Forwarding Unit
+    SIGNAL alu_src1, alu_src2 : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0'); -- ALU Source Selector
 
-    SIGNAL pc_stall : STD_LOGIC;
+    SIGNAL pc_stall : STD_LOGIC := '0';
 
     --------------------------------------------------------------------------------------------------------  
 
     SIGNAL mem_wb_in_regwrite, mem_wb_in_OUT_enable : STD_LOGIC := '0';
-    SIGNAL mem_wb_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL mem_wb_in_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_in_regdst : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_in_mem_data, mem_wb_in_alu_result, mem_wb_in_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL mem_wb_out_regwrite, mem_wb_out_OUT_enable : STD_LOGIC := '0';
-    SIGNAL mem_wb_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL mem_wb_out_wb_select : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_out_regdst : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_out_dataout : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mem_wb_out_mem_data, mem_wb_out_alu_result, mem_wb_out_in_data : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
@@ -396,8 +396,8 @@ BEGIN
         id_ex_out_rsrc2;
 
     sp_adder <= ZERO WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '0') ELSE
-        POS_TWO WHEN (ex_mem_out_SP_Plus = '1' AND ex_mem_out_SP_Negative = '0') ELSE
-        NEG_TWO WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '1') ELSE
+        POS_ONE WHEN (ex_mem_out_SP_Plus = '1' AND ex_mem_out_SP_Negative = '0') ELSE
+        NEG_ONE WHEN (ex_mem_out_SP_Plus = '0' AND ex_mem_out_SP_Negative = '1') ELSE
         ZERO;
     memory_re <= ex_mem_out_MR;
     memory_we <= (ex_mem_out_MW AND NOT sp_overflow);
@@ -671,7 +671,7 @@ BEGIN
     HazardDetection1 : HazardDetection PORT MAP(
         -- CLOCK
         clk => clk,
-        
+
         -- Inputs
         id_ie_mem_read => id_ex_out_MR, -- IE/MEM memRead  signal
         id_ie_reg_write => id_ex_out_regWrite, -- IE/MEM RegWrite signal
@@ -697,7 +697,6 @@ BEGIN
             IF (pc_stall = '0') THEN
                 pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             END IF;
-            sp <= sp_new;
             IF instruction_reg(0) = '1' THEN
                 instruction_reg <= (OTHERS => '0');
             ELSE
@@ -706,6 +705,8 @@ BEGIN
             IF mem_wb_out_OUT_enable = '1' THEN
                 out_port_internal <= mem_wb_out_dataout;
             END IF;
+        ELSIF falling_edge(clk) THEN
+            sp <= sp_new;
         END IF;
     END PROCESS;
 END behavior;
