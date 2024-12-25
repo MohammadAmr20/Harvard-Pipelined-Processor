@@ -14,14 +14,16 @@ ARCHITECTURE behavior OF processor IS
     SIGNAL pc : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL sp, sp_new : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '1');
     SIGNAL instruction, instruction_reg, in_reg, selected_instruction_ifid, selected_immediate_ifid : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL reserved_flags, acu_out_flag_register : STD_LOGIC_VECTOR(2 DOWNTO 0) := (OTHERS => '0');
     SIGNAL if_id_out_rsrc1, if_id_out_rsrc2, if_id_out_rdest : STD_LOGIC_VECTOR(2 DOWNTO 0);
     SIGNAL if_id_out_opCode : STD_LOGIC_VECTOR(4 DOWNTO 0);
     SIGNAL if_id_out_pc, if_id_out_pc_1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL if_id_out_reserved_flags : STD_LOGIC_VECTOR(2 DOWNTO 0);
     SIGNAL if_id_out_in_reg : STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL if_id_out_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
-
+    SIGNAL acu_in_interrupt_address : STD_LOGIC_VECTOR(15 DOWNTO 0);
+    SIGNAL acu_old_pc, exception_pc, acu_out_address : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL acu_exception_flag, acu_address_change_flag, acu_stage_detector, acu_flag_enable : STD_LOGIC;
     --------------------------------------------------------------------------------------------------------  
 
     SIGNAL id_ex_in_data1, id_ex_in_data2, id_ex_in_in_data, id_ex_in_immediate : STD_LOGIC_VECTOR(15 DOWNTO 0);
@@ -65,6 +67,7 @@ ARCHITECTURE behavior OF processor IS
     CONSTANT POS_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(2, 12));
     CONSTANT NEG_TWO : STD_LOGIC_VECTOR(11 DOWNTO 0) := STD_LOGIC_VECTOR(to_signed(-2, 12));
     SIGNAL memory_address : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL memory_address_overflow : STD_LOGIC;
     SIGNAL memory_data_in, memory_data_out : STD_LOGIC_VECTOR(15 DOWNTO 0);
     SIGNAL memory_we, memory_re : STD_LOGIC;
 
@@ -347,7 +350,35 @@ ARCHITECTURE behavior OF processor IS
 
         );
     END COMPONENT;
-
+    COMPONENT interrupt_table is
+        port(
+            index : in std_logic_vector(3 downto 0);
+            data_out : out std_logic_vector(15 downto 0)
+        );
+    END COMPONENT;
+    COMPONENT ACU is
+        port(
+            decodeexecute_pc, executememory_pc : in std_logic_vector(11 downto 0);
+            interrupt_address, alu_src, mem_out : in std_logic_vector(15 downto 0);
+            decodeexecute_branch_selector : in std_logic_vector(1 downto 0);
+            execute_flag_register : in std_logic_vector (2 downto 0);
+            decodeexecute_branch_signal, reset, sp_overflow, memadd_overflow, decodeexecute_interrupt_signal, return_signal  : in std_logic;
+            out_address, old_pc : out std_logic_vector (11 downto 0);
+            out_flag_register : out std_logic_vector (2 downto 0);
+            exception_flag, address_change_flag, stage_detector, flag_enable : out std_logic -- stage_detection { 1=>mem, 0=>execute  }
+        );
+    END COMPONENT;
+    COMPONENT FlushUnit is
+        PORT(
+            -- Inputs
+            branch : IN STD_LOGIC; -- branching exist or not
+            stage : IN STD_LOGIC; -- branching stage 0=Excute, 1=Memory
+            -- Outputs
+            flush_if_id : OUT STD_LOGIC; -- Reset FetchDecode Register
+            flush_id_ie : OUT STD_LOGIC; -- Reset DecodeExcute Register
+            flush_ie_mem : OUT STD_LOGIC -- Reset ExcuteMemory Register
+        );
+    END COMPONENT;
 BEGIN
     reset_ifid <= reset OR ((NOT instruction_reg(0)) AND instruction(0));
     reset_idie <= pc_stall;
@@ -405,10 +436,12 @@ BEGIN
     memory_address <= sp_new WHEN ex_mem_out_memaddsrc = "10" ELSE
         sp WHEN ex_mem_out_memaddsrc = "01" ELSE
         ex_mem_out_alu_result(11 DOWNTO 0);
+    
+    memory_address_overflow <= '1' when (ex_mem_out_MR = '1') and (ex_mem_out_memaddsrc = "11" or ex_mem_out_memaddsrc = "00") and ( ex_mem_out_alu_result(12) = '1' or ex_mem_out_alu_result(15) = '1' or ex_mem_out_alu_result(14) = '1' or ex_mem_out_alu_result(13) = '1' ) 
+        else '0';
 
     memory_data_in <= "0000" & ex_mem_out_pc_1 WHEN ex_mem_out_memwritesrc = '1' ELSE
         ex_mem_out_rsrc2;
-
     mem_wb_in_regwrite <= ex_mem_out_regWrite;
     mem_wb_in_wb_select <= ex_mem_out_wb_select;
     mem_wb_in_regdst <= ex_mem_out_rdest;
@@ -687,6 +720,32 @@ BEGIN
         pc_stall => pc_stall -- PC stall
 
     );
+    INTERRUPT_TABLE1 : interrupt_table PORT MAP(
+        index => alu_result(3 DOWNTO 0),
+        data_out => acu_in_interrupt_address
+    );
+    ACU1 : ACU PORT MAP(
+        decodeexecute_pc => id_ex_out_pc,
+        executememory_pc => ex_mem_out_pc,
+        interrupt_address => acu_in_interrupt_address,
+        alu_src => alu_result,
+        mem_out => memory_data_out,
+        decodeexecute_branch_selector => id_ex_out_branchselector,
+        execute_flag_register => flag_register,
+        decodeexecute_branch_signal => id_ex_out_branch,
+        reset => reset,
+        sp_overflow => sp_overflow,
+        memadd_overflow => memory_address_overflow,
+        decodeexecute_interrupt_signal => id_ex_out_INT,
+        return_signal => ex_mem_in_RET,
+        out_address => acu_out_address,
+        old_pc => acu_old_pc,
+        out_flag_register => acu_out_flag_register,
+        exception_flag => acu_exception_flag,
+        address_change_flag => acu_address_change_flag,
+        stage_detector => acu_stage_detector,
+        flag_enable => acu_flag_enable
+    );
     out_port <= out_port_internal;
     PROCESS (clk) BEGIN
         IF reset = '1' THEN
@@ -697,15 +756,22 @@ BEGIN
             IF (pc_stall = '0') THEN
                 pc <= STD_LOGIC_VECTOR(unsigned(pc) + 1);
             END IF;
-            sp <= sp_new;
             IF instruction_reg(0) = '1' THEN
-                instruction_reg <= (OTHERS => '0');
+            instruction_reg <= (OTHERS => '0');
             ELSE
-                instruction_reg <= instruction;
+            instruction_reg <= instruction;
             END IF;
             IF mem_wb_out_OUT_enable = '1' THEN
-                out_port_internal <= mem_wb_out_dataout;
+            out_port_internal <= mem_wb_out_dataout;
             END IF;
+            IF acu_exception_flag = '1' THEN
+                exception_pc <= acu_old_pc;
+            END IF;
+            IF acu_flag_enable = '1' THEN
+                reserved_flags <= acu_out_flag_register;
+            END IF;
+        ELSIF falling_edge(clk) THEN
+            sp <= sp_new;
         END IF;
     END PROCESS;
 END behavior;

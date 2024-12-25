@@ -38,8 +38,3 @@ int 2
 rti 
 NOP
 RTI
-
-
-
-
-
