@@ -3,3 +3,5 @@
 *.mpf
 *.wlf
 *work/
+*.bak
+wlft*
